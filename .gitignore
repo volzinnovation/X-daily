@@ -17,6 +17,6 @@ blob-report/
 .auth/
 state.json
 
-# X-Daily Data
-data/
-archive/
+# X-Daily Data - Uncomment to run
+# data/
+# archive/

@@ -20,6 +20,14 @@ This project is currently under active development. Features and APIs are subjec
 2.  **Configure**: Copy `secrets.properties.example` to `secrets.properties` and add your credentials.
 3.  **Run**: `python main.py`
 
+## GitHub Actions Configuration
+
+> [!IMPORTANT]
+> For GitHub Actions to work (daily automated runs), you must go to your **GitHub Repository Settings -> Secrets and variables -> Actions** and add the following Repository secrets:
+>
+> - `X_USERNAME`
+> - `X_PASSWORD`
+
 ## License
 
 [MIT](LICENSE)
