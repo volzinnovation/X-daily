@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+env/
+venv/
+
+# Secrets
+secrets.properties
+.env
+
+# Playwright
+test-results/
+playwright-report/
+blob-report/
+.auth/
+state.json
+
+# X-Daily Data
+data/
+archive/
