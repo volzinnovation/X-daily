@@ -2,6 +2,7 @@
 <html>
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>X-Daily</title>
   <link rel="stylesheet" href="styles.css">
 </head>
@@ -17,6 +18,7 @@
     <div class="controls">
       <button id="generateBtn" class="btn btn-primary">Generate Daily Summary</button>
       <button id="demoBtn" class="btn btn-secondary">Preview Demo</button>
+      <button id="archiveBtn" class="btn btn-secondary">Digest Archive</button>
       <button id="settingsBtn" class="btn btn-secondary">Settings</button>
     </div>
     
@@ -29,13 +31,30 @@
       <div class="stats">
         <span id="postCount">0</span> posts from <span id="accountCount">0</span> accounts
       </div>
+
+      <div id="briefingPanel" class="briefing-panel"></div>
       
       <div id="newsletter" class="newsletter"></div>
       
       <div class="actions">
+        <button id="saveArchiveBtn" class="btn btn-primary">Save Digest</button>
         <button id="downloadBtn" class="btn btn-secondary">Download HTML</button>
         <button id="emailBtn" class="btn btn-secondary">Send via Email</button>
       </div>
+    </div>
+
+    <div id="archive" class="archive hidden">
+      <div class="section-header">
+        <div>
+          <h2>Digest Archive</h2>
+          <p><span id="archiveCount">0</span> saved digests</p>
+        </div>
+        <button id="exportArchiveBtn" class="btn btn-secondary">Export</button>
+      </div>
+      <input type="search" id="archiveSearch" class="search-input" placeholder="Search topics, handles, keywords" />
+      <div id="archiveList" class="archive-list"></div>
+      <p id="archiveEmpty" class="empty-state">No saved digests yet. Generate or preview a digest, then save it here.</p>
+      <button id="clearArchiveBtn" class="btn btn-quiet">Clear Archive</button>
     </div>
     
     <div id="settings" class="settings hidden">
@@ -73,6 +92,7 @@
   <script src="processor.js"></script>
   <script src="clustering.js"></script>
   <script src="newsletter.js"></script>
+  <script src="archive.js"></script>
   <script src="demo-data.js"></script>
   <script src="popup.js"></script>
 </body>

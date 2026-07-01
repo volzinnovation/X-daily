@@ -1,22 +1,37 @@
 // Popup script for X-Daily extension
 
 document.addEventListener('DOMContentLoaded', () => {
+  const extensionApi = getExtensionApi();
+  const chrome = extensionApi;
   const generateBtn = document.getElementById('generateBtn');
   const demoBtn = document.getElementById('demoBtn');
+  const archiveBtn = document.getElementById('archiveBtn');
   const settingsBtn = document.getElementById('settingsBtn');
   const saveSettingsBtn = document.getElementById('saveSettingsBtn');
+  const saveArchiveBtn = document.getElementById('saveArchiveBtn');
   const downloadBtn = document.getElementById('downloadBtn');
   const emailBtn = document.getElementById('emailBtn');
+  const exportArchiveBtn = document.getElementById('exportArchiveBtn');
+  const clearArchiveBtn = document.getElementById('clearArchiveBtn');
+  const archiveSearch = document.getElementById('archiveSearch');
+  const archiveList = document.getElementById('archiveList');
+  const archiveEmpty = document.getElementById('archiveEmpty');
+  const archiveCount = document.getElementById('archiveCount');
   const statusDiv = document.getElementById('status');
   const loadingDiv = document.getElementById('loading');
   const resultsDiv = document.getElementById('results');
   const settingsDiv = document.getElementById('settings');
+  const archiveDiv = document.getElementById('archive');
   
   let currentNewsletter = null;
   let currentPosts = [];
+  let currentClusters = {};
+  let currentSource = 'live';
+  let archiveEntries = [];
   
   // Load settings
   loadSettings();
+  loadArchive();
   
   generateBtn.addEventListener('click', async () => {
     await generateDailySummary();
@@ -24,6 +39,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
   demoBtn.addEventListener('click', () => {
     generateDemoSummary();
+  });
+
+  archiveBtn.addEventListener('click', () => {
+    archiveDiv.classList.toggle('hidden');
+    settingsDiv.classList.add('hidden');
+    renderArchive();
   });
   
   /**
@@ -150,6 +171,10 @@ document.addEventListener('DOMContentLoaded', () => {
     saveSettings();
     // Status message is now shown inside saveSettings()
   });
+
+  saveArchiveBtn.addEventListener('click', async () => {
+    await saveCurrentDigest();
+  });
   
   downloadBtn.addEventListener('click', () => {
     if (currentNewsletter) {
@@ -162,11 +187,38 @@ document.addEventListener('DOMContentLoaded', () => {
       await sendNewsletterEmail(currentNewsletter);
     }
   });
+
+  exportArchiveBtn.addEventListener('click', () => {
+    exportArchive();
+  });
+
+  clearArchiveBtn.addEventListener('click', async () => {
+    await clearArchive();
+  });
+
+  archiveSearch.addEventListener('input', () => {
+    renderArchive();
+  });
+
+  archiveList.addEventListener('click', (event) => {
+    const button = event.target.closest('button[data-digest-id]');
+    if (!button) return;
+    const entry = archiveEntries.find((item) => item.id === button.dataset.digestId);
+    if (entry) {
+      displayArchivedDigest(entry);
+    }
+  });
   
   async function generateDailySummary() {
+    if (!hasExtensionRuntime()) {
+      showStatus('Live scraping requires the Chrome extension runtime. Use Preview Demo in this browser view.', 'error');
+      return;
+    }
+
     showStatus('Starting...', 'info');
     loadingDiv.classList.remove('hidden');
     resultsDiv.classList.add('hidden');
+    archiveDiv.classList.add('hidden');
     
     try {
       // Get following accounts (will automatically navigate if needed)
@@ -209,6 +261,8 @@ document.addEventListener('DOMContentLoaded', () => {
       
       currentNewsletter = newsletter;
       currentPosts = processedPosts;
+      currentClusters = clusters;
+      currentSource = 'live';
       
       // Display results
       displayResults(processedPosts, clusters, newsletter);
@@ -242,6 +296,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     currentNewsletter = newsletter;
     currentPosts = demoPosts;
+    currentClusters = clusters;
+    currentSource = 'demo';
     displayResults(demoPosts, clusters, newsletter);
     showStatus('Demo summary ready. No X session required.', 'success');
   }
@@ -457,6 +513,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     const newsletterDiv = document.getElementById('newsletter');
     newsletterDiv.innerHTML = newsletter;
+    renderBriefingPanel(posts, clusters, newsletter);
     
     resultsDiv.classList.remove('hidden');
   }
@@ -471,6 +528,238 @@ document.addEventListener('DOMContentLoaded', () => {
         statusDiv.classList.add('hidden');
       }, 5000);
     }
+  }
+
+  function renderBriefingPanel(posts, clusters, newsletter) {
+    const archiveApi = window.XDailyArchive;
+    if (!archiveApi) return;
+
+    const entry = archiveApi.buildDigestArchiveEntry({
+      posts,
+      clusters,
+      newsletter,
+      source: currentSource,
+      generatedAt: new Date().toISOString(),
+    });
+    const topClusters = entry.clusterSummaries.slice(0, 3);
+
+    document.getElementById('briefingPanel').innerHTML = `
+      <div class="briefing-heading">
+        <div>
+          <span class="eyebrow">${escapeText(entry.source)} briefing</span>
+          <h2>${entry.clusterCount} topic groups ranked by signal</h2>
+        </div>
+        <div class="signal-score">${entry.topKeywords.slice(0, 3).map(escapeText).join(' · ') || 'No keywords yet'}</div>
+      </div>
+      <div class="topic-grid">
+        ${topClusters.map((cluster) => `
+          <article class="topic-card">
+            <div class="topic-meta">${cluster.postCount} posts · priority ${cluster.priorityScore}</div>
+            <h3>${escapeText(cluster.title)}</h3>
+            <p>${escapeText(cluster.excerpt || 'No excerpt available.')}</p>
+            <div class="handle-row">${cluster.handles.map((handle) => `<span>${escapeText(handle)}</span>`).join('')}</div>
+          </article>
+        `).join('')}
+      </div>
+    `;
+  }
+
+  async function loadArchive() {
+    const stored = await storageGet('xDailyDigestArchive');
+    archiveEntries = Array.isArray(stored) ? stored : [];
+    renderArchive();
+  }
+
+  async function saveCurrentDigest() {
+    if (!currentNewsletter || currentPosts.length === 0) {
+      showStatus('Generate or preview a digest before saving it.', 'error');
+      return;
+    }
+
+    const entry = window.XDailyArchive.buildDigestArchiveEntry({
+      posts: currentPosts,
+      clusters: currentClusters,
+      newsletter: currentNewsletter,
+      source: currentSource,
+      generatedAt: new Date().toISOString(),
+    });
+    const withoutDuplicate = archiveEntries.filter((item) => item.id !== entry.id);
+    archiveEntries = window.XDailyArchive.sortArchiveEntries([entry, ...withoutDuplicate]).slice(0, 30);
+    await storageSet('xDailyDigestArchive', archiveEntries);
+    renderArchive();
+    showStatus(`Saved ${entry.dateLabel} digest to the local archive.`, 'success');
+  }
+
+  function renderArchive() {
+    if (!window.XDailyArchive) return;
+
+    archiveCount.textContent = archiveEntries.length;
+    const filtered = window.XDailyArchive.filterArchiveEntries(archiveEntries, archiveSearch.value);
+    archiveEmpty.classList.toggle('hidden', filtered.length > 0);
+    archiveList.innerHTML = filtered.map((entry) => `
+      <article class="archive-item">
+        <div>
+          <div class="archive-meta">${escapeText(entry.dateLabel)} · ${escapeText(entry.source)} · ${entry.postCount} posts</div>
+          <h3>${entry.clusterCount} topics from ${entry.accountCount} accounts</h3>
+          <p>${escapeText((entry.topKeywords || []).slice(0, 6).join(', ') || 'No keywords captured.')}</p>
+        </div>
+        <button class="btn btn-secondary" data-digest-id="${escapeText(entry.id)}">Open</button>
+      </article>
+    `).join('');
+  }
+
+  function displayArchivedDigest(entry) {
+    currentNewsletter = entry.newsletter;
+    currentPosts = [];
+    currentClusters = {};
+    currentSource = entry.source || 'archive';
+    document.getElementById('postCount').textContent = entry.postCount;
+    document.getElementById('accountCount').textContent = entry.accountCount;
+    document.getElementById('newsletter').innerHTML = entry.newsletter;
+    document.getElementById('briefingPanel').innerHTML = `
+      <div class="briefing-heading">
+        <div>
+          <span class="eyebrow">archived briefing</span>
+          <h2>${entry.clusterCount} topic groups saved ${escapeText(entry.dateLabel)}</h2>
+        </div>
+        <div class="signal-score">${escapeText((entry.topKeywords || []).slice(0, 3).join(' · ') || 'No keywords')}</div>
+      </div>
+      <div class="topic-grid">
+        ${(entry.clusterSummaries || []).slice(0, 3).map((cluster) => `
+          <article class="topic-card">
+            <div class="topic-meta">${cluster.postCount} posts · priority ${cluster.priorityScore}</div>
+            <h3>${escapeText(cluster.title)}</h3>
+            <p>${escapeText(cluster.excerpt || 'No excerpt available.')}</p>
+          </article>
+        `).join('')}
+      </div>
+    `;
+    resultsDiv.classList.remove('hidden');
+    archiveDiv.classList.add('hidden');
+    settingsDiv.classList.add('hidden');
+    showStatus('Archived digest loaded.', 'success');
+  }
+
+  function exportArchive() {
+    if (archiveEntries.length === 0) {
+      showStatus('Save at least one digest before exporting.', 'error');
+      return;
+    }
+    const html = window.XDailyArchive.createDigestExport(archiveEntries);
+    downloadHtml(html, `x-daily-archive-${new Date().toISOString().split('T')[0]}.html`);
+    showStatus('Archive export prepared.', 'success');
+  }
+
+  async function clearArchive() {
+    if (archiveEntries.length === 0) {
+      showStatus('Archive is already empty.', 'info');
+      return;
+    }
+    if (!window.confirm('Clear all saved X-Daily digests from this browser?')) {
+      return;
+    }
+    archiveEntries = [];
+    await storageSet('xDailyDigestArchive', archiveEntries);
+    renderArchive();
+    showStatus('Digest archive cleared.', 'success');
+  }
+
+  function storageGet(key) {
+    return new Promise((resolve) => {
+      chrome.storage.local.get([key], (items) => {
+        resolve(items[key]);
+      });
+    });
+  }
+
+  function storageSet(key, value) {
+    return new Promise((resolve) => {
+      chrome.storage.local.set({ [key]: value }, resolve);
+    });
+  }
+
+  function downloadHtml(html, filename) {
+    const blob = new Blob([html], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function escapeText(value) {
+    return String(value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function hasExtensionRuntime() {
+    return Boolean(extensionApi.tabs && extensionApi.scripting && extensionApi.runtime);
+  }
+
+  function getExtensionApi() {
+    if (window.chrome && window.chrome.storage) {
+      return window.chrome;
+    }
+    return createLocalPreviewApi();
+  }
+
+  function createLocalPreviewApi() {
+    function load(area) {
+      try {
+        return JSON.parse(window.localStorage.getItem(`xDaily.${area}`) || '{}');
+      } catch (error) {
+        return {};
+      }
+    }
+
+    function save(area, data) {
+      window.localStorage.setItem(`xDaily.${area}`, JSON.stringify(data));
+    }
+
+    function getValues(area, keys, callback) {
+      const data = load(area);
+      if (Array.isArray(keys)) {
+        callback(keys.reduce((items, key) => ({ ...items, [key]: data[key] }), {}));
+        return;
+      }
+      if (typeof keys === 'string') {
+        callback({ [keys]: data[keys] });
+        return;
+      }
+      if (keys && typeof keys === 'object') {
+        callback(Object.entries(keys).reduce((items, [key, fallback]) => ({
+          ...items,
+          [key]: data[key] === undefined ? fallback : data[key],
+        }), {}));
+        return;
+      }
+      callback({ ...data });
+    }
+
+    function makeArea(area) {
+      return {
+        get(keys, callback) {
+          getValues(area, keys, callback);
+        },
+        set(values, callback) {
+          save(area, { ...load(area), ...values });
+          if (callback) callback();
+        },
+      };
+    }
+
+    return {
+      runtime: { lastError: null },
+      storage: {
+        local: makeArea('local'),
+        sync: makeArea('sync'),
+      },
+    };
   }
   
   function loadSettings() {

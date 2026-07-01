@@ -12,6 +12,7 @@ This project is currently under active development. Features and APIs are subjec
 - **Content Scraping**: Fetches the latest posts from users you follow directly from X.com pages.
 - **Smart Analysis**: Clusters posts by topic using TF-IDF and K-Means (running locally in the browser).
 - **Daily Digest**: Generates a clean HTML newsletter with the day's top stories.
+- **Digest Archive**: Saves local briefing snapshots, ranks topic groups, searches past digests, and exports an archive HTML file.
 - **Privacy-First**: All processing happens locally in your browser - no data sent to external servers.
 
 ## Getting Started
@@ -70,6 +71,9 @@ This project is currently under active development. Features and APIs are subjec
    - The summary will appear in the popup
 
 4. **Download or Share**
+   - Click "Save Digest" to keep the current briefing in the local digest archive
+   - Open "Digest Archive" to search saved topics, handles, and keywords
+   - Click "Export" in the archive view to download a portable HTML archive
    - Click "Download HTML" to save the newsletter as an HTML file
    - The newsletter can be opened in any browser
 
@@ -265,6 +269,7 @@ The extension consists of:
 - `background.js`: Service worker for API requests
 - `content.js`: Script that runs on X.com pages
 - `popup.html/js`: User interface
+- `archive.js`: Local digest archive, briefing ranking, search, and export helpers
 - `clustering.js`: Topic clustering algorithm
 - `newsletter.js`: HTML newsletter generation
 - `processor.js`: Post processing utilities
@@ -284,6 +289,9 @@ assert LegacyDataStorage is DataStorage
 assert callable(main.main)
 PY
 python -m pytest -q
+node --check extension/archive.js
+node --check extension/popup.js
+node tests/archive.test.cjs
 ```
 
 ### Offline Sample Newsletter
