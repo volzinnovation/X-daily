@@ -282,6 +282,16 @@ PY
 python -m pytest -q
 ```
 
+### Offline Sample Newsletter
+
+Generate a deterministic demo newsletter without browser auth or X.com scraping:
+
+```bash
+python scripts/generate_sample_newsletter.py
+```
+
+The command reads `tests/fixtures/sample_clusters.json` and writes `docs/sample_newsletter.html`.
+
 ## License
 
 [MIT](LICENSE)

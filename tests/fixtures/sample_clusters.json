@@ -1,0 +1,36 @@
+{
+  "date": "June 30, 2026",
+  "generated_at": "2026-07-01 09:00:00",
+  "clusters": [
+    {
+      "summary": "Launch and space operations",
+      "posts": [
+        {
+          "handle": "NASA",
+          "timestamp": "2026-06-30T12:00:00Z",
+          "clean_text": "Artemis teams completed a launch-readiness review and published the next checkpoint window.",
+          "images": []
+        },
+        {
+          "handle": "SpaceX",
+          "timestamp": "2026-06-30T15:30:00Z",
+          "clean_text": "Recovery teams confirmed the booster inspection checklist for the next Starship flight.",
+          "images": [
+            "https://example.com/starship-checklist.png"
+          ]
+        }
+      ]
+    },
+    {
+      "summary": "AI product updates",
+      "posts": [
+        {
+          "handle": "OpenAI",
+          "timestamp": "2026-06-30T17:45:00Z",
+          "clean_text": "A developer note highlighted eval coverage, safer tool use, and lower-latency model responses.",
+          "images": []
+        }
+      ]
+    }
+  ]
+}

@@ -1,8 +1,11 @@
-from jinja2 import Template
+from jinja2 import Environment, select_autoescape
 from datetime import datetime
 
 class NewsletterGenerator:
     def __init__(self):
+        self.environment = Environment(
+            autoescape=select_autoescape(default_for_string=True)
+        )
         self.template_str = """
         <!DOCTYPE html>
         <html>
@@ -31,7 +34,7 @@ class NewsletterGenerator:
                     {% for post in cluster.posts %}
                     <div class="post">
                         <div class="handle">@{{ post.handle }} <span class="date">{{ post.timestamp }}</span></div>
-                        <div class="content">{{ post.clean_text | replace('\n', '<br>') | safe }}</div>
+                        <div class="content">{{ post.clean_text | e | replace('\n', '<br>' | safe) }}</div>
                         {% if post.images %}
                         <div class="media">
                             {% for img in post.images %}
@@ -52,23 +55,54 @@ class NewsletterGenerator:
         </html>
         """
 
-    def generate(self, clustered_data: dict) -> str:
+    def generate(self, clustered_data, date: str | None = None, generated_at: str | None = None) -> str:
         """
         Render the HTML newsletter.
-        clustered_data format expected: [{"summary": "Topic 1", "posts": [...]}, ...]
+        clustered_data can be {cluster_id: [posts]} or
+        [{"summary": "Topic", "posts": [...]}, ...].
         """
-        template = Template(self.template_str)
-        today = datetime.now().strftime("%B %d, %Y")
-        
-        # Transform dict {id: [posts]} to list sorted by size/importance
-        clusters_list = []
-        for cid, posts in clustered_data.items():
-            # Simple summary logic can be improved in Analyzer
-            summary = f"Topic Group {cid+1}"
-            clusters_list.append({"summary": summary, "posts": posts})
-            
+        template = self.environment.from_string(self.template_str)
+
         return template.render(
-            date=today,
-            clusters=clusters_list,
-            generated_at=datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            date=date or datetime.now().strftime("%B %d, %Y"),
+            clusters=self._clusters_list(clustered_data),
+            generated_at=generated_at or datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         )
+
+    def _clusters_list(self, clustered_data) -> list[dict]:
+        if isinstance(clustered_data, list):
+            clusters = []
+            for index, cluster in enumerate(clustered_data, start=1):
+                if isinstance(cluster, dict) and "posts" in cluster:
+                    clusters.append({
+                        "summary": cluster.get("summary") or f"Topic Group {index}",
+                        "posts": cluster.get("posts") or []
+                    })
+                else:
+                    clusters.append({
+                        "summary": f"Topic Group {index}",
+                        "posts": cluster
+                    })
+            return clusters
+
+        clusters = []
+        for index, (cluster_id, posts) in enumerate(clustered_data.items(), start=1):
+            if isinstance(posts, dict) and "posts" in posts:
+                summary = posts.get("summary") or f"Topic Group {self._topic_number(cluster_id, index)}"
+                cluster_posts = posts.get("posts") or []
+            else:
+                summary = f"Topic Group {self._topic_number(cluster_id, index)}"
+                cluster_posts = posts
+
+            clusters.append({
+                "summary": summary,
+                "posts": cluster_posts
+            })
+        return clusters
+
+    @staticmethod
+    def _topic_number(cluster_id, fallback: int) -> int:
+        try:
+            return int(cluster_id) + 1
+        except (TypeError, ValueError):
+            return fallback
