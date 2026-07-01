@@ -2,6 +2,7 @@
 
 document.addEventListener('DOMContentLoaded', () => {
   const generateBtn = document.getElementById('generateBtn');
+  const demoBtn = document.getElementById('demoBtn');
   const settingsBtn = document.getElementById('settingsBtn');
   const saveSettingsBtn = document.getElementById('saveSettingsBtn');
   const downloadBtn = document.getElementById('downloadBtn');
@@ -19,6 +20,10 @@ document.addEventListener('DOMContentLoaded', () => {
   
   generateBtn.addEventListener('click', async () => {
     await generateDailySummary();
+  });
+
+  demoBtn.addEventListener('click', () => {
+    generateDemoSummary();
   });
   
   /**
@@ -216,6 +221,29 @@ document.addEventListener('DOMContentLoaded', () => {
     } finally {
       loadingDiv.classList.add('hidden');
     }
+  }
+
+  function generateDemoSummary() {
+    const demoPosts = (window.X_DAILY_DEMO_POSTS || []).map(post => ({
+      ...post,
+      original_text: post.original_text || post.clean_text,
+    }));
+
+    if (demoPosts.length === 0) {
+      showStatus('Demo data is not available in this build.', 'error');
+      return;
+    }
+
+    loadingDiv.classList.add('hidden');
+    settingsDiv.classList.add('hidden');
+    const clusterCount = Math.min(3, demoPosts.length);
+    const clusters = clusterPosts(demoPosts, clusterCount);
+    const newsletter = generateNewsletter(clusters);
+
+    currentNewsletter = newsletter;
+    currentPosts = demoPosts;
+    displayResults(demoPosts, clusters, newsletter);
+    showStatus('Demo summary ready. No X session required.', 'success');
   }
   
   async function getFollowingAccounts() {

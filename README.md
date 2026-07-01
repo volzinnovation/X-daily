@@ -56,7 +56,11 @@ This project is currently under active development. Features and APIs are subjec
    - Click the X-Daily icon in your Chrome toolbar
    - The extension popup will open
 
-2. **Generate Daily Summary**
+2. **Preview without X**
+   - Click "Preview Demo" to render a local fixture newsletter
+   - This is useful for checking the popup, clustering, and download flow before using a live X session
+
+3. **Generate Daily Summary**
    - Click "Generate Daily Summary" button
    - The extension will:
      - Fetch the list of accounts you follow
@@ -65,7 +69,7 @@ This project is currently under active development. Features and APIs are subjec
      - Generate an HTML newsletter
    - The summary will appear in the popup
 
-3. **Download or Share**
+4. **Download or Share**
    - Click "Download HTML" to save the newsletter as an HTML file
    - The newsletter can be opened in any browser
 
