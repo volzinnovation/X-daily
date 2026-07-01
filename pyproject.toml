@@ -1,0 +1,30 @@
+[project]
+name = "x-daily"
+version = "0.1.0"
+description = "Local X daily digest scraper and newsletter generator."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "beautifulsoup4==4.12.3",
+    "jinja2==3.1.2",
+    "lxml==5.1.0",
+    "numpy==1.26.0",
+    "playwright==1.49.1",
+    "python-dotenv==1.0.0",
+    "requests==2.31.0",
+    "scikit-learn==1.3.2",
+    "tenacity==8.2.3",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"

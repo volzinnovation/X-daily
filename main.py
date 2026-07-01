@@ -43,7 +43,7 @@ def main():
         
         if not all_raw_posts:
             print("No posts found. Exiting.")
-            return
+            return 0
 
         # 4. Process & Enrich
         transcriber = MockTranscriber()
@@ -77,14 +77,16 @@ def main():
         # 9. Archive
         archiver = GitArchiver()
         archiver.archive_day()
+        return 0
 
     except Exception as e:
         print(f"Fatal Error: {e}")
         import traceback
         traceback.print_exc()
+        return 1
     finally:
         auth.stop()
         print("Automation complete.")
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

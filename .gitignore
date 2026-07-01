@@ -2,6 +2,8 @@
 __pycache__/
 *.py[cod]
 *$py.class
+.pytest_cache/
+.ruff_cache/
 .venv/
 env/
 venv/
@@ -16,6 +18,10 @@ playwright-report/
 blob-report/
 .auth/
 state.json
+
+# Generated local outputs
+latest_newsletter.html
+*.log
 
 # X-Daily Data - Uncomment to run
 # data/

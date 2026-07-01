@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 from playwright.sync_api import sync_playwright
+from src.auth_manager import STATE_FILE_MODE
 
 def setup_session():
     print("Starting manual login session...")
@@ -26,6 +27,7 @@ def setup_session():
             # Save state
             auth_file = Path("state.json")
             context.storage_state(path=auth_file)
+            os.chmod(auth_file, STATE_FILE_MODE)
             print(f"Session saved to {auth_file.absolute()}")
             
         except Exception as e:

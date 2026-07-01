@@ -8,9 +8,14 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: daily-x-scrape
+  cancel-in-progress: false
+
 jobs:
   run-scraper:
     runs-on: ubuntu-latest
+    timeout-minutes: 45
 
     steps:
       - name: Checkout repository
@@ -22,12 +27,32 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+          cache: pip
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          playwright install chromium
+          python -m pip install -r requirements.txt
+          python -m playwright install --with-deps chromium
+
+      - name: Import smoke check
+        run: |
+          python - <<'PY'
+          from src.database.storage import DataStorage as LegacyDataStorage
+          from src.operations.storage import DataStorage
+          import main
+
+          assert LegacyDataStorage is DataStorage
+          assert callable(main.main)
+          PY
+
+      - name: Validate required secrets
+        env:
+          X_USERNAME: ${{ secrets.X_USERNAME }}
+          X_PASSWORD: ${{ secrets.X_PASSWORD }}
+        run: |
+          test -n "$X_USERNAME" || (echo "X_USERNAME secret is required" && exit 1)
+          test -n "$X_PASSWORD" || (echo "X_PASSWORD secret is required" && exit 1)
 
       - name: Configure Git
         # Required for local commits in main.py -> archiver.py

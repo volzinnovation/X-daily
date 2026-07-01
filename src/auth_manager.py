@@ -4,9 +4,11 @@ from pathlib import Path
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError
 from src.config import config
 
+STATE_FILE_MODE = 0o600
+
 class AuthManager:
-    def __init__(self):
-        self.auth_file = Path("state.json")
+    def __init__(self, auth_file=None):
+        self.auth_file = Path(auth_file) if auth_file else Path("state.json")
         self.browser = None
         self.context = None
         self.page = None
@@ -40,6 +42,16 @@ class AuthManager:
         if self.playwright:
             self.playwright.stop()
 
+    def save_storage_state(self):
+        if not self.context:
+            raise RuntimeError("Browser context has not been started.")
+
+        self.context.storage_state(path=self.auth_file)
+        try:
+            os.chmod(self.auth_file, STATE_FILE_MODE)
+        except OSError as exc:
+            print(f"Warning: could not restrict permissions on {self.auth_file}: {exc}")
+
     def ensure_logged_in(self):
         """
         Checks if currently logged in. If not, performs login flow.
@@ -64,14 +76,19 @@ class AuthManager:
             self.login()
             
     def login(self):
-        print(f"Logging in as {config.X_USERNAME}...")
+        username = config.X_USERNAME
+        password = config.X_PASSWORD
+        if not username or not password:
+            raise RuntimeError("X_USERNAME and X_PASSWORD must be set before login.")
+
+        print("Logging in to X...")
         self.page.goto("https://x.com/i/flow/login")
         
         # 1. Enter Username
         try:
             username_input = self.page.locator('input[autocomplete="username"]')
             username_input.wait_for(state="visible", timeout=10000)
-            username_input.fill(config.X_USERNAME)
+            username_input.fill(username)
         except Exception as e:
             print(f"Error finding username field: {e}")
             raise
@@ -110,8 +127,8 @@ class AuthManager:
                 # We need to know what it is asking for. 
                 # If we don't have a separate email config, we might retry username or fail.
                 # Let's assume we proceed with X_EMAIL if available, else X_USERNAME
-                verify_value = config.get("X_EMAIL", config.X_USERNAME)
-                print(f"Providing verification value: {verify_value}")
+                verify_value = config.get("X_EMAIL", username)
+                print("Providing configured verification value.")
                 verification_input.fill(verify_value)
                 
                 # Click Next again
@@ -125,7 +142,7 @@ class AuthManager:
         try:
             password_input = self.page.locator('input[name="password"]')
             password_input.wait_for(state="visible", timeout=10000)
-            password_input.fill(config.X_PASSWORD)
+            password_input.fill(password)
             
             # 5. Click Log in
             login_btn = self.page.get_by_role("button", name="Log in")
@@ -145,7 +162,7 @@ class AuthManager:
         try:
             self.page.wait_for_url("https://x.com/home", timeout=20000)
             print("Login successful. Saving state...")
-            self.context.storage_state(path=self.auth_file)
+            self.save_storage_state()
         except Exception:
             print("Login flow finished but did not reach home. Check if 2FA is requested or login failed.")
 
