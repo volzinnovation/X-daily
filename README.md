@@ -1,6 +1,6 @@
 # X-Daily
 
-An automated tool to "read" X (formerly Twitter) for you. X-Daily logs in via a headless browser, scrapes posts from your network, clusters them by topic, and delivers a daily summary newsletter.
+An automated Chrome extension to "read" X (formerly Twitter) for you. X-Daily uses your existing X.com session to scrape posts from accounts you follow, clusters them by topic, and generates a daily summary newsletter.
 
 ## 🚧 Work In Progress
 
@@ -8,25 +8,254 @@ This project is currently under active development. Features and APIs are subjec
 
 ## Features
 
-- **Automated Login**: Securely handles authentication using Playwright.
-- **Content Scraping**: Fetches the latest posts from users you follow or specific lists.
-- **Smart Analysis**: Clusters posts by topic using TF-IDF and K-Means (running locally).
+- **No Login Required**: Uses your existing X.com session - just log in to X.com in your browser!
+- **Content Scraping**: Fetches the latest posts from users you follow directly from X.com pages.
+- **Smart Analysis**: Clusters posts by topic using TF-IDF and K-Means (running locally in the browser).
 - **Daily Digest**: Generates a clean HTML newsletter with the day's top stories.
-- **Data Archival**: Commits raw data and summaries to a Git repository for permanent history.
+- **Privacy-First**: All processing happens locally in your browser - no data sent to external servers.
 
 ## Getting Started
 
-1.  **Install Dependencies**: `pip install -r requirements.txt` && `playwright install chromium`
-2.  **Configure**: Copy `secrets.properties.example` to `secrets.properties` and add your credentials.
-3.  **Run**: `python main.py`
+### Installation
 
-## GitHub Actions Configuration
+1. **Clone or download this repository**
+   ```bash
+   git clone <repository-url>
+   cd X-daily
+   ```
 
-> [!IMPORTANT]
-> For GitHub Actions to work (daily automated runs), you must go to your **GitHub Repository Settings -> Secrets and variables -> Actions** and add the following Repository secrets:
->
-> - `X_USERNAME`
-> - `X_PASSWORD`
+2. **Add Extension Icons**
+   - Navigate to `extension/icons/` directory
+   - Add three icon files:
+     - `icon16.png` (16x16 pixels)
+     - `icon48.png` (48x48 pixels)
+     - `icon128.png` (128x128 pixels)
+   - You can create these using any image editor or online icon generator
+
+3. **Load the Extension in Chrome**
+   - Open Chrome and navigate to `chrome://extensions/`
+   - Enable "Developer mode" (toggle in top-right corner)
+   - Click "Load unpacked"
+   - Select the `extension` folder from this repository
+   - The X-Daily extension should now appear in your extensions list
+
+4. **Log in to X.com**
+   - Open a new tab and navigate to [x.com](https://x.com)
+   - Log in to your X account as you normally would
+   - The extension will use your existing session
+
+### Usage
+
+1. **Open the Extension**
+   - Click the X-Daily icon in your Chrome toolbar
+   - The extension popup will open
+
+2. **Generate Daily Summary**
+   - Click "Generate Daily Summary" button
+   - The extension will:
+     - Fetch the list of accounts you follow
+     - Scrape posts from yesterday
+     - Process and cluster posts by topic
+     - Generate an HTML newsletter
+   - The summary will appear in the popup
+
+3. **Download or Share**
+   - Click "Download HTML" to save the newsletter as an HTML file
+   - The newsletter can be opened in any browser
+
+### Settings
+
+Click the "Settings" button to configure:
+- **Auto-generate daily summary**: Automatically generate summary at a set time (coming soon)
+- **Email address**: For email delivery (requires backend setup)
+- **Number of clusters**: Adjust how many topic groups to create (default: 5)
+
+## How It Works
+
+1. **Session Authentication**: The extension uses Chrome's cookie API to access your X.com session cookies, so you don't need to provide credentials.
+
+2. **Content Extraction**: The extension uses content scripts to interact with X.com pages and extract:
+   - List of accounts you follow
+   - Posts from each account
+   - Post metadata (timestamp, images, etc.)
+
+3. **Processing**: Posts are processed locally in the browser:
+   - Text cleaning and normalization
+   - Image extraction
+   - Topic clustering using TF-IDF vectorization and K-Means
+
+4. **Newsletter Generation**: A clean HTML newsletter is generated with posts grouped by topic clusters.
+
+## Technical Details
+
+- **Manifest V3**: Built using Chrome Extension Manifest V3
+- **Content Scripts**: Interact with X.com pages to extract data
+- **Background Service Worker**: Handles API requests and cookie management
+- **Local Processing**: All clustering and processing happens client-side
+
+## Privacy & Security
+
+- ✅ No credentials stored
+- ✅ No data sent to external servers
+- ✅ Uses your existing browser session
+- ✅ All processing happens locally
+- ✅ Open source - inspect the code yourself
+
+## Limitations
+
+- X.com's structure may change, requiring updates to the content script selectors
+- Rate limiting: The extension respects X.com's rate limits by adding delays between requests
+- Large following lists: Processing many accounts may take time
+- API changes: X.com's internal APIs may change, affecting functionality
+
+## Troubleshooting
+
+**Extension not working?**
+- Make sure you're logged in to X.com in the same browser
+- Check that the extension has the necessary permissions
+- Open Chrome DevTools (F12) and check the Console for errors
+
+**No posts found?**
+- Verify you're following accounts that posted recently
+- Check that the date range is correct (defaults to yesterday)
+- Some accounts may have private posts that can't be accessed
+
+**Posts not loading?**
+- X.com may have changed its page structure - the extension may need updates
+- Try refreshing the X.com page and generating again
+
+## Debugging
+
+The extension consists of multiple components that can be debugged separately. Here's how to access and debug each part:
+
+### 1. Debug the Popup (UI)
+
+The popup is the extension's user interface that appears when you click the extension icon.
+
+**To debug:**
+1. Right-click on the X-Daily extension icon in your Chrome toolbar
+2. Select "Inspect popup" from the context menu
+3. This opens Chrome DevTools for the popup
+4. Use the Console tab to see `console.log()` messages and errors
+5. Use the Elements tab to inspect the HTML structure
+6. Use the Network tab to see any network requests made by the popup
+
+**Common issues to check:**
+- JavaScript errors in the Console
+- Network requests failing
+- Storage API calls (check Application > Storage in DevTools)
+
+### 2. Debug the Background Service Worker
+
+The background service worker handles API requests, cookie management, and message passing between components.
+
+**To debug:**
+1. Go to `chrome://extensions/`
+2. Find "X-Daily" in the list
+3. Click "Inspect views: service worker" (or "background page" for Manifest V2)
+4. This opens DevTools for the background script
+5. Check the Console for logs and errors
+6. Use the Network tab to see API requests to X.com
+
+**What to look for:**
+- Cookie retrieval errors
+- API request failures
+- Message handling errors
+- Service worker lifecycle issues (check if it's running)
+
+**Note:** If the service worker is inactive, you may need to trigger an action from the popup to wake it up, or click "Inspect views" again.
+
+### 3. Debug Content Scripts
+
+Content scripts run on X.com pages to extract data from the DOM.
+
+**To debug:**
+1. Navigate to [x.com](https://x.com) in a regular tab
+2. Open Chrome DevTools (F12 or Right-click > Inspect)
+3. Go to the Console tab
+4. Content script logs will appear here (they run in the page context)
+5. You can also add breakpoints in the Sources tab
+
+**To see content script files:**
+- In DevTools, go to Sources tab
+- Look under "Content scripts" in the file tree
+- You should see `content.js` listed there
+
+**What to check:**
+- DOM selectors working correctly (X.com may have changed structure)
+- Data extraction errors
+- Console errors from content script execution
+
+### 4. Debug Extension Storage
+
+The extension uses Chrome's storage API to save settings and data.
+
+**To inspect storage:**
+1. Open DevTools (any component)
+2. Go to Application tab (Chrome) or Storage tab (Firefox)
+3. Expand "Storage" > "Extension Storage"
+4. Check "Local Storage" or "Sync Storage" for saved data
+5. You can view, edit, or clear stored values here
+
+### 5. General Debugging Tips
+
+**Enable verbose logging:**
+- The extension uses `console.log()` statements throughout
+- Make sure DevTools Console is open to see all logs
+- Look for messages prefixed with "X-Daily" or related to the extension
+
+**Check extension errors:**
+- Go to `chrome://extensions/`
+- Look for error badges or warnings on the extension card
+- Click "Errors" button if available to see detailed error messages
+
+**Reload the extension:**
+- After making code changes, reload the extension:
+  1. Go to `chrome://extensions/`
+  2. Click the reload icon (↻) on the X-Daily extension card
+  3. Or toggle the extension off and on
+
+**Test in isolation:**
+- Use the Console in DevTools to manually test functions
+- For example, in the popup console, you can call functions directly
+- In the background console, you can test API calls
+
+**Network debugging:**
+- Check the Network tab in DevTools to see:
+  - API requests to X.com
+  - Request/response headers
+  - Response data
+  - Failed requests (red entries)
+
+**Common debugging scenarios:**
+- **Extension not responding:** Check background service worker console
+- **No data extracted:** Check content script console on X.com page
+- **UI not updating:** Check popup console for JavaScript errors
+- **API calls failing:** Check background console and Network tab
+- **Storage issues:** Check Application > Storage in DevTools
+
+### 6. Debugging Checklist
+
+When reporting issues or debugging:
+- [ ] Check popup console for UI errors
+- [ ] Check background service worker console for API errors
+- [ ] Check content script console on X.com page
+- [ ] Verify extension is loaded and enabled in `chrome://extensions/`
+- [ ] Check Network tab for failed requests
+- [ ] Verify you're logged into X.com
+- [ ] Check storage for saved settings/data
+- [ ] Try reloading the extension
+
+## Development
+
+The extension consists of:
+- `manifest.json`: Extension configuration
+- `background.js`: Service worker for API requests
+- `content.js`: Script that runs on X.com pages
+- `popup.html/js`: User interface
+- `clustering.js`: Topic clustering algorithm
+- `newsletter.js`: HTML newsletter generation
+- `processor.js`: Post processing utilities
 
 ## License
 

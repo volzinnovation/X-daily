@@ -1,15 +1,12 @@
-import sys
 from datetime import datetime, timedelta
-from src.config import config
 from src.auth_manager import AuthManager
 from src.scraper.following import FollowingScraper
 from src.scraper.search import SearchScraper
-from src.database.storage import DataStorage
+
 from src.processor.media_transcriber import MockTranscriber
 from src.processor.cleaning import ContentProcessor
 from src.analyzer.clustering import TopicClusterer
 from src.generator.newsletter import NewsletterGenerator
-from src.delivery.email_client import EmailClient
 from src.operations.archiver import GitArchiver
 from src.operations.storage import DataStorage
 
