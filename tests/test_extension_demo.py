@@ -36,3 +36,12 @@ def test_popup_wires_archive_helpers():
     assert "window.XDailyArchive" in popup_js
     assert "buildDigestArchiveEntry" in archive_js
     assert "module.exports" in archive_js
+
+
+def test_popup_uses_stable_extension_width():
+    css = (ROOT / "extension" / "styles.css").read_text(encoding="utf-8")
+
+    assert "width: min(540px, 100vw)" not in css
+    assert "--popup-width: 430px;" in css
+    assert "min-width: var(--popup-width);" in css
+    assert "max-height: 600px;" in css
